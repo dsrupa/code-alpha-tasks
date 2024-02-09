@@ -1,0 +1,65 @@
+import pandas as pd
+df = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/Training.csv')
+
+print(df.head(5))
+X = df.iloc[:, :-1] 
+y = df['prognosis']   
+X_encoded = pd.get_dummies(X)
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+from sklearn.metrics import accuracy_score, classification_report
+
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+feature_importance = pd.DataFrame({'Feature': X_encoded.columns, 'Importance': model.feature_importances_})
+feature_importance = feature_importance.sort_values(by='Importance', ascending=False)
+print(feature_importance)
+test_data = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/Testing.csv')
+test_data_encoded = pd.get_dummies(test_data)  # Encode if needed
+test_predictions = model.predict(test_data_encoded)
+
+print("Predictions for testing data:")
+print(test_predictions)
+testing_data = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/Testing.csv')
+
+true_labels = testing_data['prognosis']
+
+
+accuracy_test = accuracy_score(true_labels, test_predictions)
+print("Accuracy on testing data:", accuracy_test)
+
+print("\nClassification Report:")
+print(classification_report(true_labels, test_predictions))
+  import pandas as pd
+from ipywidgets import interact_manual, Dropdown
+df = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/Training.csv')
+symptoms = df.columns[:-1].tolist()
+
+def Diagnosis_Forecast(**selected_symptoms):
+    
+    input_data = pd.DataFrame({symptom: [0] for symptom in symptoms})
+    for symptom, value in selected_symptoms.items():
+        if symptom != 'prognosis':
+            input_data[symptom] = int(value)
+
+  
+    input_encoded = pd.get_dummies(input_data)
+
+   
+    input_encoded = input_encoded.reindex(columns=model.feature_names_in_, fill_value=0)
+
+    prediction = model.predict(input_encoded)[0]
+
+    return f"The predicted disease based on symptoms is: {prediction}"
+
+interact_manual(Diagnosis_Forecast, **{symptom: Dropdown(options=[0, 1], description=symptom) for symptom in symptoms if symptom != 'prognosis'})
