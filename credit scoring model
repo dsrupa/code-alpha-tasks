@@ -1,0 +1,202 @@
+import numpy as np
+import pandas as pd
+import os
+
+# Customized function and variable names
+def explore_directory(directory_path):
+    for current_dir, _, file_list in os.walk(directory_path):
+        for file_name in file_list:
+            file_path = os.path.join(current_dir, file_name)
+            print(file_path)
+
+target_directory = '/kaggle/input'
+
+explore_directory(target_directory)
+df_train = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/train.csv')
+df_train
+df_test = pd.read_csv('C:/Users/dsrup/OneDrive/Desktop/test.csv')
+df_test
+df_train.describe()
+df_train.info()
+del_col = ['ID', 'Customer_ID', 'Month','Name','SSN', 'Credit_Mix','Credit_History_Age', 'Payment_Behaviour', 'Changed_Credit_Limit', 'Monthly_Balance', 'Type_of_Loan']
+df_train1 = df_train.drop(del_col, axis=1)
+df_test1 = df_test.drop(del_col, axis=1)
+df_train1.columns
+df_train2 = df_train1.dropna()
+df_test2 = df_test1.dropna()
+df_train2.shape
+df_test2.shape
+df_test2.columns
+df_train3 = df_train2.sample(5000, random_state = 0)
+df_train3
+df_train3.info()
+df_train4 = df_train3
+df_train4['Occupation'] = pd.factorize(df_train3['Occupation'])[0]
+df_train4['Payment_of_Min_Amount'] = pd.factorize(df_train3['Payment_of_Min_Amount'])[0]
+df_train4['Credit_Score'] = pd.factorize(df_train3['Credit_Score'])[0]
+df_train4
+df_train4['Age'] = np.array([item.replace('_','') for item in df_train4['Age']], dtype=float)
+df_train4['Annual_Income'] = np.array([item.replace('_','') for item in df_train4['Annual_Income']], dtype=float)
+df_train4['Num_of_Loan'] = np.array([item.replace('_','') for item in df_train4['Num_of_Loan']], dtype=float)
+df_train4['Num_of_Delayed_Payment'] = np.array([item.replace('_','') for item in df_train4['Num_of_Delayed_Payment']], dtype=float)
+df_train4['Outstanding_Debt'] = np.array([item.replace('_','') for item in df_train4['Outstanding_Debt']], dtype=float)
+df_train4['Amount_invested_monthly'] = np.array([item.replace('_','') for item in df_train4['Amount_invested_monthly']], dtype=float)
+df_train4
+np.array(df_train4['Age'], dtype=float)
+df_train4.describe()
+del_row = list(np.where(df_train4['Age'] < 0) [0]) + list(np.where(df_train4['Age'] > 100) [0]) + list(np.where(df_train4['Num_Bank_Accounts'] < 0) [0])
+df_train5 = df_train4.drop(df_train4.index[del_row])
+df_train5.describe()
+X = np.array(df_train4.drop(['Credit_Score'], axis=1).values , dtype=float)
+y = np.array(df_train4['Credit_Score'].values, dtype=float)
+[sum(y==item) for item in np.unique(y)]
+X
+y
+[sum(y==item) for item in np.unique(y)]
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, stratify=y, random_state=0) 
+[sum(y_test==item) for item in np.unique(y_test)]
+[sum(y_train==item) for item in np.unique(y_train)]
+from sklearn.preprocessing import MinMaxScaler
+scl = MinMaxScaler().fit(X_train)
+X_train_norm = scl.transform(X_train)
+X_test_norm = scl.transform(X_test)
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+clf = GridSearchCV(SVC(),{'C':[1,2,4,8] }, cv=10).fit(X_train_norm, y_train)
+
+clf
+clf.best_params_
+clf.best_score_
+
+from sklearn.model_selection import cross_val_predict
+from sklearn.ensemble import RandomForestClassifier  
+
+clf = RandomForestClassifier()
+
+yp = cross_val_predict(clf, X_train_norm, y_train, cv=10)
+from sklearn.metrics import classification_report
+print(classification_report(y_train, yp))
+clf = RandomForestClassifier()
+
+
+clf.fit(X_train_norm, y_train)
+
+
+yp_test = clf.predict(X_test_norm)
+
+
+print(classification_report(y_test, yp_test))
+df_train5.var(axis=0).sort_values()
+df_train5.T.drop_duplicates().T
+
+res = df_train5.corr().unstack().sort_values(ascending=False)
+res[res < 1]
+​from sklearn.feature_selection import chi2,f_classif, mutual_info_classif
+from sklearn.feature_selection import SelectKBest
+fs = SelectKBest(f_classif,k=5).fit(X_train_norm, y_train)
+X_train_norm_fs =  fs.transform(X_train_norm)
+X_test_norm_fs =  fs.transform(X_test_norm)
+X_train_norm_fs
+X_train_norm_fs.shape
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+clf = GridSearchCV(SVC(),{'C':[1,2,4,8] }, cv=10).fit(X_train_norm, y_train)
+from sklearn.model_selection import cross_val_predict
+yp = cross_val_predict(clf.best_estimator_, X_train_norm_fs, y_train, cv=10)
+from sklearn.metrics import classification_report
+print(classification_report(y_train, yp))
+
+from sklearn.metrics import ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+ConfusionMatrixDisplay.from_predictions(y_train, yp, cmap= "Blues")
+plt.show()
+clf = RandomForestClassifier()
+
+
+clf.fit(X_train_norm, y_train)
+
+
+yp_test = clf.predict(X_test_norm)
+
+
+print(classification_report(y_test, yp_test))
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.feature_selection import SequentialFeatureSelector
+sfs = SequentialFeatureSelector(LogisticRegression(),n_features_to_select=5, direction='forward', cv=5).fit(X_train_norm, y_train)
+X_train_norm_sfs = sfs.transform(X_train_norm)
+X_test_norm_sfs = sfs.transform(X_test_norm)
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+clf = GridSearchCV(SVC(),{'C':[1,2,4,8] }, cv=10).fit(X_train_norm_sfs, y_train)
+from sklearn.model_selection import cross_val_predict
+yp = cross_val_predict(clf.best_estimator_, X_train_norm_sfs, y_train, cv=10)
+from sklearn.metrics import classification_report
+print(classification_report(y_train, yp))
+from sklearn.metrics import ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+ConfusionMatrixDisplay.from_predictions(y_train, yp, cmap= "Blues")
+plt.show()
+
+ypt = clf.predict(X_test_norm_fs)
+print(classification_report(y_test, ypt))
+​from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel
+efs = SelectFromModel(RandomForestClassifier(),max_features=5).fit(X_train_norm, y_train)
+X_train_norm_efs = efs.transform(X_train_norm)
+X_test_norm_efs = efs.transform(X_test_norm)
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+clf = GridSearchCV(SVC(),{'C':[1,2,4,8] }, cv=10).fit(X_train_norm_efs, y_train)
+from sklearn.model_selection import cross_val_predict
+yp = cross_val_predict(clf.best_estimator_, X_train_norm_efs, y_train, cv=10)
+from sklearn.metrics import classification_report
+print(classification_report(y_train, yp))
+
+ypt = clf.predict(X_test_norm_efs)
+print(classification_report(y_test, ypt))
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_selection import SelectFromModel
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+
+
+clf = Pipeline([
+('scaler', MinMaxScaler()),
+('feature_selection', SelectFromModel(RandomForestClassifier())),
+('classification', SVC())
+])
+clf.fit(X_train, y_train)
+from sklearn.model_selection import cross_val_predict
+yp = cross_val_predict(clf, X_train, y_train, cv=5)
+from sklearn.metrics import classification_report
+print(classification_report(y_train, yp))
+ypt = clf.predict(X_test)
+from sklearn.metrics import classification_report
+print(classification_report(y_test, ypt))
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_selection import SelectFromModel
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+
+clf = Pipeline([
+('scl', MinMaxScaler()),
+('fs', SelectFromModel(RandomForestClassifier())),
+('cls', SVC())
+])
+clf.fit(X_train, y_train)
+
+params = {
+"fs__max_features": [5,10],       
+"cls__C": [1,2,4,8],     
+}
+clf = GridSearchCV(clf, params).fit(X_train, y_train)
+print("Best parameter (CV score=%0.3f):" % clf.best_score_)
+print(clf.best_params_)
